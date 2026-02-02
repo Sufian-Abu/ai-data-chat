@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { introspectSchema } from "../../../Server/db/introspect";
+import { getSchemaSummaryCached } from "../../../server/db/schemaCache";
 
 export async function GET() {
   try {
-    const schemaSummary = await introspectSchema();
+    const schemaSummary = await getSchemaSummaryCached();
 
     return NextResponse.json({
       ok: true,
