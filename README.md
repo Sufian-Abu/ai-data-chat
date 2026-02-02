@@ -1,10 +1,10 @@
 # AI Data Chat
 
-AI Data Chat is a small experimental app that lets you ask questions about a PostgreSQL database using natural language.
+AI Data Chat is a small experimental app that lets you ask questions about a **PostgreSQL** database using natural language.
 
 It translates questions into **safe, read-only SQL**, executes them on the server, and returns results as tables or charts with short explanations and optional follow-up questions.
 
-This project is intentionally minimal and opinionated, built as a foundation for data exploration—not a full BI tool.
+This project is intentionally minimal and opinionated—built for fast data exploration, not as a full BI tool.
 
 ---
 
@@ -19,6 +19,10 @@ This project is intentionally minimal and opinionated, built as a foundation for
   - Bar charts
 - Optionally asks clarifying questions when needed
 - Keeps database access fully server-side
+- **Optimizes token usage** by:
+  - Caching schema introspection (TTL)
+  - Sending a **compact schema prompt** (text, not full JSON)
+  - **Shortlisting relevant tables** per question
 
 ---
 
@@ -29,6 +33,7 @@ This project is intentionally minimal and opinionated, built as a foundation for
 - No dashboard builder or saved reports
 - No direct LLM → database access
 - No attempt to replace BI tools
+- No production-grade PII governance (only basic “accident prevention”)
 
 ---
 
@@ -46,17 +51,48 @@ This project is intentionally minimal and opinionated, built as a foundation for
 
 1. User asks a question (text or voice)
 2. Server:
-   - Introspects database schema
+   - Introspects database schema (cached with TTL)
+   - Shortlists likely relevant tables/columns for the question
+   - Builds a compact schema prompt (text format)
    - Sends schema + question to the LLM
 3. LLM returns structured JSON:
    - SQL query
    - Short explanation
-   - Visualization suggestion
-4. SQL is validated for safety
-5. Query is executed
+   - Visualization suggestion (optional)
+   - Insights/follow-ups (optional)
+4. SQL is validated for safety via `sqlGuard`
+5. Query is executed **server-side** using a pooled connection with:
+   - Read-only transaction
+   - Statement timeout
 6. Results are returned to the UI
 
 The LLM **never** connects to the database directly.
+
+---
+
+## Safety model (MVP guardrails)
+
+Before execution, generated SQL is validated to enforce:
+
+- Single statement only
+- Only `SELECT` / `WITH`
+- Blocks common write/admin keywords (INSERT/UPDATE/DELETE/DROP/etc.)
+- Blocks `SELECT *` (accident prevention)
+- Enforces `LIMIT` (adds default if missing, clamps max)
+- Optional: blocks common PII/contact tokens like `email`, `phone` (accident prevention)
+
+> Note: This is MVP-level safety. Production systems should use a proper SQL parser + allow-listing.
+
+---
+
+## Performance and token optimizations
+
+To keep responses fast and costs low:
+
+- **Schema introspection is cached** for a short TTL instead of running on every request
+- The prompt uses **compact schema text** rather than full schema JSON
+- Only **relevant tables** (shortlisted per question) are included in the prompt
+- Only recent conversation turns are included (bounded history)
 
 ---
 
