@@ -1,14 +1,16 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "./globals.css";
 
-export const metadata = {
-  title: "AI Data Chat MVP",
-  description: "Chat with your database using AI",
+export const metadata: Metadata = {
+  title: "AI Data Chat",
+  description: "Ask natural-language questions against a PostgreSQL database using safe SQL.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body style={{ margin: 0, background: "#fff", color: "#000" }}>
+    <html lang="en" suppressHydrationWarning>
+      <body>
         {children}
       </body>
     </html>
